@@ -47,7 +47,9 @@ fun DashboardScreen(
     state: DashboardUiState,
     onNavigateToResidents: () -> Unit,
     onNavigateToIncidents: () -> Unit,
-    onNavigateToNewResident: () -> Unit
+    onNavigateToNewResident: () -> Unit,
+    currentCapacity: Int,
+    onUpdateCapacity: (Int) -> Unit
 ) {
     Scaffold(topBar = { SimpleTopBar("ONG Care - Painel", false) }) { padding ->
         Column(
@@ -59,6 +61,12 @@ fun DashboardScreen(
                 StatsCard("Acolhidos", state.activeResidents.toString(), Modifier.weight(1f), Color(0xFFE3F2FD))
                 StatsCard("Vagas Livres", state.availableSpots.toString(), Modifier.weight(1f), Color(0xFFE8F5E9))
             }
+
+            // Ajuste de Capacidade
+            CapacityEditor(
+                capacity = currentCapacity,
+                onSave = onUpdateCapacity
+            )
 
             Text("Acesso Rápido", style = MaterialTheme.typography.titleMedium)
 
@@ -89,6 +97,41 @@ fun StatsCard(title: String, value: String, modifier: Modifier, color: Color) {
         Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, style = MaterialTheme.typography.displayMedium)
             Text(title, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+@Composable
+fun CapacityEditor(capacity: Int, onSave: (Int) -> Unit) {
+    val ctx = LocalContext.current
+    var text by remember(capacity) { mutableStateOf(capacity.toString()) }
+    Card {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Capacidade Máxima", style = MaterialTheme.typography.titleMedium)
+            OutlinedTextField(
+                value = text,
+                onValueChange = { input ->
+                    // permite apenas dígitos
+                    text = input.filter { it.isDigit() }
+                },
+                singleLine = true,
+                label = { Text("Quantidade máxima de acolhidos") },
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = {
+                    val value = text.toIntOrNull()
+                    if (value == null) {
+                        Toast.makeText(ctx, "Informe um número válido", Toast.LENGTH_SHORT).show()
+                    } else {
+                        onSave(value)
+                        Toast.makeText(ctx, "Capacidade atualizada para $value", Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    Icon(Icons.Default.Check, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Salvar Capacidade")
+                }
+            }
         }
     }
 }

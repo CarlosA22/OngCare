@@ -21,22 +21,31 @@ class MainViewModel : ViewModel() {
     // Converte o fluxo do repositório para um estado que a UI observa
     val residents: StateFlow<List<Resident>> = repository.residents
     val incidents: StateFlow<List<Incident>> = repository.incidents
+    val capacity: StateFlow<Int> = repository.capacity
 
     // Estado derivado para o Dashboard
-    val dashboardStats = residents.combine(incidents) { resList, incList ->
-        val active = resList.count { it.status == ResidentStatus.ATIVO }
-        val capacity = 20
-        DashboardUiState(
-            activeResidents = active,
-            availableSpots = capacity - active,
-            recentIncidents = incList.takeLast(3).size // Exemplo simples
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashboardUiState())
+    val dashboardStats = residents
+        .combine(incidents) { resList, incList ->
+            Pair(resList, incList)
+        }
+        .combine(capacity) { (resList, incList), cap ->
+            val active = resList.count { it.status == ResidentStatus.ATIVO }
+            DashboardUiState(
+                activeResidents = active,
+                availableSpots = (cap - active).coerceAtLeast(0),
+                recentIncidents = incList.takeLast(3).size // Exemplo simples
+            )
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashboardUiState())
+
+    fun updateCapacity(newCapacity: Int) {
+        repository.setCapacity(newCapacity)
+    }
 }
 
 data class DashboardUiState(
     val activeResidents: Int = 0,
-    val availableSpots: Int = 20,
+    val availableSpots: Int = 0,
     val recentIncidents: Int = 0
 )
 

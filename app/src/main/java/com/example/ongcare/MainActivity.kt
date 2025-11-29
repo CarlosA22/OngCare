@@ -44,6 +44,7 @@ fun OngApp() {
         // 1. Dashboard
         composable(Screen.Dashboard.route) {
             val dashboardState by mainViewModel.dashboardStats.collectAsState()
+            val capacity by mainViewModel.capacity.collectAsState()
             DashboardScreen(
                 state = dashboardState,
                 onNavigateToResidents = { navController.navigate(Screen.ResidentList.route) },
@@ -51,7 +52,9 @@ fun OngApp() {
                 onNavigateToNewResident = { 
                     residentViewModel.clearSelectedResident()
                     navController.navigate(Screen.ResidentForm.createRoute())
-                }
+                },
+                currentCapacity = capacity,
+                onUpdateCapacity = { newCap -> mainViewModel.updateCapacity(newCap) }
             )
         }
 

@@ -11,8 +11,14 @@ import kotlinx.coroutines.flow.update
 // Object em Kotlin cria um Singleton (uma única instância para todo o app)
 object OngRepository {
     
-    // Capacidade do abrigo (Regra de Negócio)
-    private const val MAX_CAPACITY = 20
+    // Capacidade do abrigo (Regra de Negócio) — agora dinâmica e observável
+    private val _capacity = MutableStateFlow(20)
+    val capacity: StateFlow<Int> = _capacity.asStateFlow()
+
+    fun setCapacity(newCapacity: Int) {
+        // Evita valores negativos; mínimo 0
+        _capacity.value = newCapacity.coerceAtLeast(0)
+    }
 
     // Listas em memória (StateFlow permite que a UI reaja a mudanças automaticamente)
     private val _residents = MutableStateFlow<List<Resident>>(emptyList())
@@ -26,7 +32,8 @@ object OngRepository {
     fun addResident(resident: Resident): Boolean {
         // Regra: Só adiciona se tiver vaga (para ativos)
         val activeCount = _residents.value.count { it.status == ResidentStatus.ATIVO }
-        if (resident.status == ResidentStatus.ATIVO && activeCount >= MAX_CAPACITY) {
+        val maxCapacity = _capacity.value
+        if (resident.status == ResidentStatus.ATIVO && activeCount >= maxCapacity) {
             return false // Sem vaga
         }
         
@@ -49,7 +56,8 @@ object OngRepository {
     // Regra: Check-in (Entrada)
     fun registerEntry(residentId: String): Boolean {
         val activeCount = _residents.value.count { it.status == ResidentStatus.ATIVO }
-        if (activeCount >= MAX_CAPACITY) return false
+        val maxCapacity = _capacity.value
+        if (activeCount >= maxCapacity) return false
         
         val resident = getResidentById(residentId) ?: return false
         updateResident(resident.copy(status = ResidentStatus.ATIVO))
@@ -77,6 +85,7 @@ object OngRepository {
     
     fun getOccupancy(): Pair<Int, Int> {
         val occupied = _residents.value.count { it.status == ResidentStatus.ATIVO }
-        return Pair(occupied, MAX_CAPACITY - occupied)
+        val maxCapacity = _capacity.value
+        return Pair(occupied, (maxCapacity - occupied).coerceAtLeast(0))
     }
 }
